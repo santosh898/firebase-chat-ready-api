@@ -4,7 +4,12 @@ const {
 } = require("./index");
 
 const config = {
-   // Your firebase config...
+    // apiKey: "AIzaSyDNTpwVe5OMza1qos34UNuPyGYTB6up8ig",
+    // authDomain: "moviestodo.firebaseapp.com",
+    // databaseURL: "https://moviestodo.firebaseio.com",
+    // projectId: "moviestodo",
+    // storageBucket: "moviestodo.appspot.com",
+    // messagingSenderId: "824293340077"
 };
 
 // initialize the app 
@@ -27,19 +32,19 @@ var chatRoomOne = new ChatRoom("chat title", userA, userB, (err) => {
 
 })
 
-/*
+
 // remove chat room
 chatRoomOne.remove(true, (err) => {
-    if(!err) console.log("chat room removed successfully ");
+    if (!err) console.log("chat room removed successfully ");
 })
-*/
+
 
 // set new title for chat room  
 chatRoomOne.setNewTitle("new chat title", (title) => {
     console.log("the chat new title is " + title);
 })
 
-// sending message
+// // sending message
 var message = chatRoomOne.sendMessage("Hi", userB.userId, (err) => {
     if (err) {
         console.log(err);
@@ -50,13 +55,13 @@ var message = chatRoomOne.sendMessage("Hi", userB.userId, (err) => {
 });
 
 
-// get chat room messages 
+// // get chat room messages 
 chatRoomOne.getMessagesAndListen((message) => {
     console.log("message: ", message.createdAt);
 })
 
 
-// update message
+// // update message
 message.updateBody("new message", (newBody) => {
     console.log("Message updated to " + newBody);
 
@@ -64,7 +69,7 @@ message.updateBody("new message", (newBody) => {
 
 
 
-// get user chats
+// // get user chats
 
 ChatRoom.getUserChatRooms(userB.userId, (err, chats) => {
     if (!err) {
@@ -78,9 +83,9 @@ ChatRoom.getUserChatRooms(userB.userId, (err, chats) => {
     }
 })
 
-// find chat by key
+// // find chat by key
 ChatRoom.findById("-LRy9VpXnrbk13zMzABo", (err, chat) => {
-    if (!err) {
+    if (chat) {
         console.log(chat.members);
     } else {
         console.log(err);

@@ -1,11 +1,11 @@
 const initializeApp = require("firebase").initializeApp;
-const firebase = require("firebase").database;
+const firebase = require("firebase").firestore;
 const _ = require("lodash")
 
 // add new errors references
-class ChatRoomError extends Error {}
-class InitializeAppError extends Error {}
-class MessageError extends Error {}
+class ChatRoomError extends Error { }
+class InitializeAppError extends Error { }
+class MessageError extends Error { }
 
 /**
  * initialize Firebase connection and configuration 
@@ -77,25 +77,54 @@ class ChatRoom {
      */
     _sendTofirebase(onComplete) {
         // create chat room reference in firebase
-        this.chatRoomRef = firebase().ref('ChatRooms/').push({
+        this.chatRoomRef = firebase().collection('ChatRooms').doc();
+        this.chatRoomRef.set({
             title: this.title,
             members: this.members,
             createdAt: this.createdAt,
             isRemoved: this.isRemoved,
         }, onComplete);
 
-        var chatKey = this.chatRoomRef.key
+        var chatKey = this.chatRoomRef.id;
         // create user chat reference in firebase
-        this.UserChatRef = firebase().ref("UsersChat").child(this.members[0].userId).child(chatKey).set(chatKey, (err) => {
-            if (err) {
-                throw new ChatRoomError(err)
+        this.UserChatRef = firebase().collection("UsersChat").doc(this.members[0].userId);
+        this.UserChatRef.get().then((snap) => {
+            if (snap.exists) {
+                console.log('userA exists');
+                this.UserChatRef.update({ [chatKey]: chatKey }).catch((err) => {
+                    if (err) {
+                        throw new ChatRoomError(err)
+                    }
+                });
             }
-        });
+            else {
+                console.log('userA not exists');
+                this.UserChatRef.set({ [chatKey]: chatKey }).catch((err) => {
+                    if (err) {
+                        throw new ChatRoomError(err)
+                    }
+                });
+            }
+        })
 
         // create user chat reference in firebase
-        this.UserChatRef = firebase().ref("UsersChat").child(this.members[1].userId).child(chatKey).set(chatKey, (err) => {
-            if (err) {
-                throw new ChatRoomError(err)
+        this.UserChatRef = firebase().collection("UsersChat").doc(this.members[1].userId);
+        this.UserChatRef.get().then((snap) => {
+            if (snap.exists) {
+                console.log('userB exists');
+                this.UserChatRef.update({ [chatKey]: chatKey }).catch((err) => {
+                    if (err) {
+                        throw new ChatRoomError(err)
+                    }
+                });
+            }
+            else {
+                console.log('userB not exists');
+                this.UserChatRef.set({ [chatKey]: chatKey }).catch((err) => {
+                    if (err) {
+                        throw new ChatRoomError(err)
+                    }
+                });
             }
         });
 
@@ -114,7 +143,7 @@ class ChatRoom {
         // update chat room title
         this.chatRoomRef.update({
             title,
-        }, onComplete(title));
+        }).then(onComplete(title));
     }
 
     /**
@@ -127,7 +156,7 @@ class ChatRoom {
             // update chat room isRemoved flag
             this.chatRoomRef.update({
                 isRemoved: true,
-            }, onComplete);
+            }).then(onComplete);
             return this;
         }
         this.chatRoomRef.remove(onComplete);
@@ -142,13 +171,12 @@ class ChatRoom {
      */
     static async removeMutualChatRooms(userA, userB, softRemove = false) {
         // get user A chat keys
-        var userARef = await firebase().ref("UsersChat").child(userA).once('value');
-        var userBRef = await firebase().ref("UsersChat").child(userB).once('value');
-        const userAChats = Object.keys(userARef.val());
-        userBRef.forEach(chat => {
-            const chatKey = chat.key;
-            var chatRoomRef = firebase().ref("ChatRooms").child(chatKey)
-            if (userAChats.includes(chatKey)) {
+        var userARef = await firebase().collection("UsersChat").doc(userA).get();
+        var userBRef = await firebase().collection("UsersChat").doc(userB).get();
+        const userAChats = Object.keys(userARef.data());
+        Object.keys(userBRef.data()).forEach(id => {
+            var chatRoomRef = firebase().collection("ChatRooms").doc(id)
+            if (userAChats.includes(id)) {
                 if (softRemove) {
                     // update chat room isRemoved flag
                     chatRoomRef.update({
@@ -184,42 +212,44 @@ class ChatRoom {
         if (_.isObject(user)) {
             user = user.userId;
         }
-        var userChatRoomsRef = firebase().ref("UsersChat").child(user);
+        var userChatRoomsRef = firebase().collection("UsersChat").doc(user);
 
-        // check if the user exist 
-        firebase().ref("UsersChat").once('value', function (snapshot) {
-            if (!snapshot.hasChild(user))
+        // check if the user exist and get Chatrooms
+        userChatRoomsRef.get().then((doc) => {
+            if (!doc.exists)
                 return onComplete("User has no chat rooms", undefined)
+            else {
+                var list = []
+                const data = doc.data();
+                const ids = Object.keys(data);
+                ids.forEach((id) => {
+                    const chatRoomRef = firebase().collection('ChatRooms').doc(id);
+                    chatRoomRef.get().then((doc) => {
+                        if (!doc.exists) {
+                            return;
+                        }
+                        const snap = doc.data();
+                        const userAFire = {
+                            userId: snap.members[0].userId,
+                            username: snap.members[0].username,
+                            photo: snap.members[0].photo
+                        };
+                        const userBFire = {
+                            userId: snap.members[1].userId,
+                            username: snap.members[1].username,
+                            photo: snap.members[1].photo
+                        }
+                        const newChat = new ChatRoom(snap.title, userAFire, userBFire, undefined, chatRoomRef);
+                        newChat.createdAt = snap.createdAt;
+                        list.push(newChat);
+                        if (list.length == ids.length) {
+                            // passing list if all user chatrooms ChatRoom instance 
+                            onComplete(undefined, list)
+                        }
+                    });
+                });
+            }
         });
-
-        // get data through firebase
-        userChatRoomsRef.once("value", function (chatSnapshot) {
-            var list = []
-            var chatsCount = chatSnapshot.numChildren()
-            chatSnapshot.forEach((ch) => {
-                var chatRoomRef = firebase().ref("ChatRooms").child(ch.key)
-                chatRoomRef.once("value", function (snapshot) {
-                    var snap = snapshot.val()
-                    const userAFire = {
-                        userId: snap.members[0].userId,
-                        username: snap.members[0].username,
-                        photo: snap.members[0].photo
-                    }
-                    const userBFire = {
-                        userId: snap.members[1].userId,
-                        username: snap.members[1].username,
-                        photo: snap.members[1].photo
-                    }
-                    var newChat = new ChatRoom(snap.title, userAFire, userBFire, undefined, chatRoomRef)
-                    newChat.createdAt = snap.createdAt
-                    list.push(newChat)
-                    if (list.length == chatsCount) {
-                        // passing list if all user chatrooms ChatRoom instance 
-                        onComplete(undefined, list)
-                    }
-                }, onComplete);
-            })
-        }, onComplete);
     }
 
     // TODO: should remove this function as it redundant to getMessagesAndListen
@@ -251,12 +281,17 @@ class ChatRoom {
      * @param {(newMessage:Message)=>void} action that should happen when receiving this message
      */
     getMessagesAndListen(action) {
-        this.chatRoomRef.child("messages").on("child_added", (snapshot, prevChildKey) => {
-            var messageRef = this.chatRoomRef.child("messages").child(snapshot.key);
-            var message = snapshot.toJSON();
-            var newMessage = new Message(message.body, message.from, this, undefined, messageRef)
-            newMessage.createdAt = message.createdAt
-            action(newMessage)
+        this.chatRoomRef.collection("messages").onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const doc = change.doc;
+                    var messageRef = this.chatRoomRef.collection("messages").doc(doc.id);
+                    var message = doc.data();
+                    var newMessage = new Message(message.body, message.from, this, undefined, messageRef);
+                    newMessage.createdAt = message.createdAt;
+                    action(newMessage);
+                }
+            });
         })
     }
 
@@ -266,10 +301,13 @@ class ChatRoom {
      * @param {(err:Error,chatroom:ChatRoom)=>void} onSuccess Callback function call after receiving the chat room  or with err if not
      */
     static findById(uid, onSuccess) {
-        var chat = firebase().ref("ChatRooms").child(uid);
-        chat.once('value', (snapshot) => {
-            try {
-                var snap = snapshot.val();
+        var chat = firebase().collection("ChatRooms").doc(uid);
+        chat.get().then((doc) => {
+            if (!doc.exists) {
+                return onSuccess('doc does not exist', undefined);
+            }
+            else {
+                const snap = doc.data();
                 if (snap === null) {
                     return onSuccess("Chat not found!", undefined);
                 }
@@ -285,11 +323,8 @@ class ChatRoom {
                 }
                 var newChat = new ChatRoom(snap.title, userAFire, userBFire, undefined, chat)
                 return onSuccess(undefined, newChat);
-            } catch (error) {
-                return onSuccess(error, undefined);
             }
-
-        }, onSuccess)
+        });
     }
 
 }
@@ -336,12 +371,12 @@ class Message {
         this.createdAt = Date.now()
 
         if (_.isEmpty(fromRef)) {
-
-            this.messageRef = firebase().ref(chatRoom.chatRoomRef).child("messages").push({
+            this.messageRef = chatRoom.chatRoomRef.collection("messages").doc();
+            this.messageRef.set({
                 body: this.body,
                 from: this.from,
                 createdAt: this.createdAt,
-            }, onComplete);
+            }).then(onComplete);
         } else {
             this.messageRef = fromRef
         }
@@ -363,7 +398,7 @@ class Message {
         this.messageRef.update({
             body: newBody,
             updatedAt: Date.now()
-        }, callback(newBody));
+        }).then(callback(newBody));
     }
 
     /**

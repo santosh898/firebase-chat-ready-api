@@ -1,7 +1,7 @@
 {
-	"name": "@nezam/firebase-chat-ready-api",
-	"version": "2.2.2",
-	"description": "Firebase-chat-ready-API is a simple package, enable fast connection to firebase realtime database to create chat manager API.",
+	"name": "firebase-chat-ready-api",
+	"version": "2.3.2",
+	"description": "Firebase-chat-ready-API is a simple package, enable fast connection to firebase firestore to create chat manager API.",
 	"main": "index.js",
 	"scripts": {
 		"start": "node examples.js",
@@ -10,6 +10,7 @@
 	"keywords": [
 		"chat",
 		"firebase",
+		"firebase-firestore",
 		"messages",
 		"chat room",
 		"realtime",
@@ -22,14 +23,14 @@
 		"chat api",
 		"firebase chat api"
 	],
-	"homepage": "https://github.com/nezamio/firebase-chat-ready-api#readme",
+	"homepage": "https://github.com/santosh898/firebase-chat-ready-api#readme",
 	"bugs": {
-		"url": "https://github.com/nezamio/firebase-chat-ready-api/issues",
+		"url": "https://github.com/santosh898/firebase-chat-ready-api/issues",
 		"email": "abanobmossad@gmail.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/nezamio/firebase-chat-ready-api.git"
+		"url": "https://github.com/santosh898/firebase-chat-ready-api.git"
 	},
 	"author": "abanob mossad",
 	"license": "MIT",

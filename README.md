@@ -1,6 +1,6 @@
 # Firebase chat API 🔥
 
-Firebase-chat-ready-API is a simple package enable fast connection to firebase realtime database to create chat manager.  Create chat rooms, send messages and listen to instance messages .
+Firebase-chat-ready-API is a simple package enable fast connection to firebase firestore to create chat manager.  Create chat rooms, send messages and listen to instance messages .
 
 ## Getting started in a minute
 
@@ -24,13 +24,13 @@ No ES6
 const {
 	initializeFirebase,
 	ChatRoom
-} = require("@nezam/firebase-chat-ready-api");
+} = require("firebase-chat-ready-api");
 ```
 
 ES6
 
 ```js
-import { initializeFirebase, ChatRoom } from "@nezam/firebase-chat-ready-api";
+import { initializeFirebase, ChatRoom } from "firebase-chat-ready-api";
 ```
 
 #### Initialize the app
