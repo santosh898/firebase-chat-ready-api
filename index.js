@@ -51,7 +51,7 @@ function createChatRoom(title, members, memberJoined) {
     }).then(() => {
         observeForMemberJoins(chatRoomRef, members, memberJoined);
         members.forEach(member => { addToMemberConversations(member.userId, chatRoomRef.id); });
-        return new ChatRoom(title, members, chatRoomRef);
+        return new ChatRoom(chatRoomRef, title, members, false, true, createdAt);
     });
 }
 
@@ -101,7 +101,7 @@ function joinChatRoom(member) {
         return chatRoomRef.update({ members: room.members, isOpen: false })
             .then(() => {
                 addToMemberConversations(member.userId, chatRoomRef.id);
-                return new ChatRoom(chatRoomRef, room);
+                return new ChatRoom(fromRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt);
             });
     })
 }
@@ -111,27 +111,21 @@ class ChatRoom {
     /**
      * create chat room between two users .
      * @constructor
+     * @param {null} fromRef shouldn't be calld at all
      * @param {String} title  the title of this chat room.
      * @param {[{userId:String, username:String, photo:String}]} members userId , username and photo of the users in this chat room.
-     * @param {null} fromRef shouldn't be calld at all
+     * @param {boolean} isRemoved if the Room is Already Removed
+     * @param {boolean} isOpen if the Room is Open to Join
+     * @param {Date} createdAt Room createdAt
      * @returns {ChatRoom} object contains all chat room properties  
      */
-    constructor(fromRef, title, members, createdAt) {
+    constructor(fromRef, title, members, isRemoved, isOpen, createdAt) {
         this.title = title
         this.members = members;
         this.createdAt = createdAt;
-        this.isRemoved = false;
+        this.isRemoved = isRemoved;
         this.chatRoomRef = fromRef;
-        this.isOpen = true;
-    }
-
-    constructor(fromRef, room) {
-        this.title = room.title;
-        this.members = room.members;
-        this.isRemoved = room.isRemoved;
-        this.createdAt = room.createdAt;
-        this.isOpen = room.isOpen;
-        this.chatRoomRef = fromRef;
+        this.isOpen = isOpen;
     }
 
     /**
