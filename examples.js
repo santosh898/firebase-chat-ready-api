@@ -4,12 +4,7 @@ const {
 } = require("./index");
 
 const config = {
-    // apiKey: "AIzaSyDNTpwVe5OMza1qos34UNuPyGYTB6up8ig",
-    // authDomain: "moviestodo.firebaseapp.com",
-    // databaseURL: "https://moviestodo.firebaseio.com",
-    // projectId: "moviestodo",
-    // storageBucket: "moviestodo.appspot.com",
-    // messagingSenderId: "824293340077"
+    //Config here
 };
 
 // initialize the app 
