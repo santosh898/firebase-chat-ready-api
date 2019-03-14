@@ -26,40 +26,44 @@ function initializeFirebase(configures) {
 }
 
 function createChatRoom(title, members, memberJoined) {
-    if (_.isEmpty(title) || !_.isString(title))
-        throw new ChatRoomError("title should be not empty and be string");
-    members.forEach(member => {
-        if (_.isEmpty(member.userId) || !_.isString(member.userId))
-            throw new ChatRoomError('Users must be a string and not empty ,your Object keys must be  {userId, username if any, photo if any} ');
+    return new Promise((resolve, reject) => {
+        if (_.isEmpty(title) || !_.isString(title))
+            throw new ChatRoomError("title should be not empty and be string");
+        members.forEach(member => {
+            if (_.isEmpty(member.userId) || !_.isString(member.userId))
+                throw new ChatRoomError('Users must be a string and not empty ,your Object keys must be  {userId, username if any, photo if any} ');
 
-        if ((member.username && !_.isString(member.username)))
-            throw new ChatRoomError("User names should be strings");
+            if ((member.username && !_.isString(member.username)))
+                throw new ChatRoomError("User names should be strings");
 
-        if ((member.photo && !_.isString(member.photo)))
-            throw new ChatRoomError("Photos should be strings");
-        member.username = member.username || '';
-        member.phtot = member.photo || '';
-    })
-    const chatRoomRef = firebase().collection('ChatRooms').doc();
-    const createdAt = Date.now();
-    chatRoomRef.set({
-        title: title,
-        members: members,
-        createdAt,
-        isRemoved: false,
-        isOpen: true
-    }).then(() => {
-        observeForMemberJoins(chatRoomRef, members, memberJoined);
-        members.forEach(member => { addToMemberConversations(member.userId, chatRoomRef.id); });
-        return new ChatRoom(chatRoomRef, title, members, false, true, createdAt);
+            if ((member.photo && !_.isString(member.photo)))
+                throw new ChatRoomError("Photos should be strings");
+            member.username = member.username || '';
+            member.phtot = member.photo || '';
+        })
+        const chatRoomRef = firebase().collection('ChatRooms').doc();
+        const createdAt = Date.now();
+        chatRoomRef.set({
+            title: title,
+            members: members,
+            createdAt,
+            isRemoved: false,
+            isOpen: true
+        }).then(() => {
+            observeForMemberJoins(chatRoomRef, members, memberJoined);
+            members.forEach(member => { addToMemberConversations(member.userId, chatRoomRef.id); });
+            resolve(new ChatRoom(chatRoomRef, title, members, false, true, createdAt));
+        });
     });
 }
 
 function observeForMemberJoins(ref, members, joined) {
     ref.onSnapshot((doc) => {
         const room = doc.data();
-        if (room.members.length > members.length)
-            joined();
+        if (room !== undefined) {
+            if (room.members.length > members.length)
+                joined();
+        }
     })
 }
 
@@ -84,27 +88,30 @@ function addToMemberConversations(memberId, chatKey) {
 }
 
 function joinChatRoom(member) {
-    const chatRoomRef = firebase().collection('ChatRooms').doc(member.id);
-    return chatRoomRef.get().then((doc) => {
-        if (!doc.exists) {
-            throw new ChatRoomError("Chat Room does'nt exist");
-        }
-        const room = doc.data();
-        if (room.isRemoved) {
-            throw new ChatRoomError("Chat Room was Already removed");
-        }
-        if (!room.isOpen) {
-            throw new ChatRoomError("Chat Room is Private");
-        }
-        room.members.push(member);
-        room.isOpen = false;
-        return chatRoomRef.update({ members: room.members, isOpen: false })
-            .then(() => {
-                addToMemberConversations(member.userId, chatRoomRef.id);
-                return new ChatRoom(fromRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt);
-            });
-    })
+    return new Promise((resolve, reject) => {
+        const chatRoomRef = firebase().collection('ChatRooms').doc(member.id);
+        chatRoomRef.get().then((doc) => {
+            if (!doc.exists) {
+                throw new ChatRoomError("Chat Room does'nt exist");
+            }
+            const room = doc.data();
+            if (room.isRemoved) {
+                throw new ChatRoomError("Chat Room was Already removed");
+            }
+            if (!room.isOpen) {
+                throw new ChatRoomError("Chat Room is Private");
+            }
+            room.members.push(member);
+            room.isOpen = false;
+            chatRoomRef.update({ members: room.members, isOpen: false })
+                .then(() => {
+                    addToMemberConversations(member.userId, chatRoomRef.id);
+                    resolve(new ChatRoom(fromRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt));
+                });
+        })
+    });
 }
+
 /**@class */
 class ChatRoom {
 
