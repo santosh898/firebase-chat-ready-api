@@ -7,7 +7,7 @@ Firebase-chat-ready-API is a simple package enable fast connection to firebase f
 **Installation with**
 
 ```sh
-$ npm install @nezam/firebase-chat-ready-api
+$ npm install firebase-chat-ready-api
 ```
 
 ## Usage
