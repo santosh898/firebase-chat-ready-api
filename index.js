@@ -1,5 +1,7 @@
-const initializeApp = require("firebase").initializeApp;
-const firebase = require("firebase").firestore;
+const firebaseApp = require('firebase/app');
+require('firebase/firestore');
+const initializeApp = firebaseApp.initializeApp;
+const firebase = firebaseApp.firestore;
 const _ = require("lodash")
 
 // add new errors references
@@ -87,11 +89,11 @@ class ChatRoom {
 
         var chatKey = this.chatRoomRef.id;
         // create user chat reference in firebase
-        this.UserChatRef = firebase().collection("UsersChat").doc(this.members[0].userId);
-        this.UserChatRef.get().then((snap) => {
+        const User1ChatRef = firebase().collection("UsersChat").doc(this.members[0].userId);
+        User1ChatRef.get().then((snap) => {
             if (snap.exists) {
                 console.log('userA exists');
-                this.UserChatRef.update({ [chatKey]: chatKey }).catch((err) => {
+                User1ChatRef.update({ [chatKey]: chatKey }).catch((err) => {
                     if (err) {
                         throw new ChatRoomError(err)
                     }
@@ -99,7 +101,7 @@ class ChatRoom {
             }
             else {
                 console.log('userA not exists');
-                this.UserChatRef.set({ [chatKey]: chatKey }).catch((err) => {
+                User1ChatRef.set({ [chatKey]: chatKey }).catch((err) => {
                     if (err) {
                         throw new ChatRoomError(err)
                     }
@@ -108,11 +110,11 @@ class ChatRoom {
         })
 
         // create user chat reference in firebase
-        this.UserChatRef = firebase().collection("UsersChat").doc(this.members[1].userId);
-        this.UserChatRef.get().then((snap) => {
+        const User2ChatRef = firebase().collection("UsersChat").doc(this.members[1].userId);
+        User2ChatRef.get().then((snap) => {
             if (snap.exists) {
                 console.log('userB exists');
-                this.UserChatRef.update({ [chatKey]: chatKey }).catch((err) => {
+                User2ChatRef.update({ [chatKey]: chatKey }).catch((err) => {
                     if (err) {
                         throw new ChatRoomError(err)
                     }
@@ -120,7 +122,7 @@ class ChatRoom {
             }
             else {
                 console.log('userB not exists');
-                this.UserChatRef.set({ [chatKey]: chatKey }).catch((err) => {
+                User2ChatRef.set({ [chatKey]: chatKey }).catch((err) => {
                     if (err) {
                         throw new ChatRoomError(err)
                     }
