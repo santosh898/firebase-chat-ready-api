@@ -25,7 +25,7 @@ function initializeFirebase(configures) {
     initializeApp(configures);
 }
 
-function createChatRoom(title, members) {
+function createChatRoom(title, members, memberJoined) {
     if (_.isEmpty(title) || !_.isString(title))
         throw new ChatRoomError("title should be not empty and be string");
     members.forEach(member => {
@@ -49,9 +49,18 @@ function createChatRoom(title, members) {
         isRemoved: false,
         isOpen: true
     }).then(() => {
+        observeForMemberJoins(chatRoomRef, members, memberJoined);
         members.forEach(member => { addToMemberConversations(member.userId, chatRoomRef.id); });
         return new ChatRoom(title, members, chatRoomRef);
     });
+}
+
+function observeForMemberJoins(ref, members, joined) {
+    ref.onSnapshot((doc) => {
+        const room = doc.data();
+        if (room.members.length > members.length)
+            joined();
+    })
 }
 
 function addToMemberConversations(memberId, chatKey) {
