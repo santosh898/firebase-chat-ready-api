@@ -24,6 +24,78 @@ function initializeFirebase(configures) {
     // Initialize Firebase
     initializeApp(configures);
 }
+
+function createChatRoom(title, members) {
+    if (_.isEmpty(title) || !_.isString(title))
+        throw new ChatRoomError("title should be not empty and be string");
+    members.forEach(member => {
+        if (_.isEmpty(member.userId) || !_.isString(member.userId))
+            throw new ChatRoomError('Users must be a string and not empty ,your Object keys must be  {userId, username if any, photo if any} ');
+
+        if ((member.username && !_.isString(member.username)))
+            throw new ChatRoomError("User names should be strings");
+
+        if ((member.photo && !_.isString(member.photo)))
+            throw new ChatRoomError("Photos should be strings");
+        member.username = member.username || '';
+        member.phtot = member.photo || '';
+    })
+    const chatRoomRef = firebase().collection('ChatRooms').doc();
+    const createdAt = Date.now();
+    chatRoomRef.set({
+        title: title,
+        members: members,
+        createdAt,
+        isRemoved: false,
+        isOpen: true
+    }).then(() => {
+        members.forEach(member => { addToMemberConversations(member.userId, chatRoomRef.id); });
+        return new ChatRoom(title, members, chatRoomRef);
+    });
+}
+
+function addToMemberConversations(memberId, chatKey) {
+    const chatRef = firebase().collection("UsersChat").doc(memberId);
+    chatRef.get().then((snap) => {
+        if (snap.exists) {
+            chatRef.update({ [chatKey]: chatKey }).catch((err) => {
+                if (err) {
+                    throw new ChatRoomError(err)
+                }
+            });
+        }
+        else {
+            chatRef.set({ [chatKey]: chatKey }).catch((err) => {
+                if (err) {
+                    throw new ChatRoomError(err)
+                }
+            });
+        }
+    })
+}
+
+function joinChatRoom(member) {
+    const chatRoomRef = firebase().collection('ChatRooms').doc(member.id);
+    return chatRoomRef.get().then((doc) => {
+        if (!doc.exists) {
+            throw new ChatRoomError("Chat Room does'nt exist");
+        }
+        const room = doc.data();
+        if (room.isRemoved) {
+            throw new ChatRoomError("Chat Room was Already removed");
+        }
+        if (!room.isOpen) {
+            throw new ChatRoomError("Chat Room is Private");
+        }
+        room.members.push(member);
+        room.isOpen = false;
+        return chatRoomRef.update({ members: room.members, isOpen: false })
+            .then(() => {
+                addToMemberConversations(member.userId, chatRoomRef.id);
+                return new ChatRoom(chatRoomRef, room);
+            });
+    })
+}
 /**@class */
 class ChatRoom {
 
@@ -31,105 +103,26 @@ class ChatRoom {
      * create chat room between two users .
      * @constructor
      * @param {String} title  the title of this chat room.
-     * @param {{userId:String, username:String, photo:String}} userA userId , username and photo of the users in this chat room.
-     * @param {{userId:String, username:String, photo:String}} userB userId , username and photo of the second user in this chat room.
-     * @param {(err:Error)=>void} [onComplete] Callback function call after creating chat room or with err if not
+     * @param {[{userId:String, username:String, photo:String}]} members userId , username and photo of the users in this chat room.
      * @param {null} fromRef shouldn't be calld at all
      * @returns {ChatRoom} object contains all chat room properties  
      */
-    constructor(title, userA, userB, onComplete, fromRef) {
-        // validate title string
-        if (_.isEmpty(title) || !_.isString(title))
-            throw new ChatRoomError("title should be not empty and be string");
+    constructor(fromRef, title, members, createdAt) {
         this.title = title
-        //  validate users Ids strings 
-        if (_.isEmpty(userA.userId) || _.isEmpty(userB.userId) || !_.isString(userA.userId) || !_.isString(userB.userId))
-            throw new ChatRoomError('Users must be a string and not empty ,your Object keys must be  {userId, username if any, photo if any} ');
-
-        if ((userA.username && !_.isString(userA.username)) || (userB.username && !_.isString(userB.username)))
-            throw new ChatRoomError("User names should be strings");
-
-        if ((userA.photo && !_.isString(userA.photo)) || (userB.photo && !_.isString(userB.photo)))
-            throw new ChatRoomError("Photos should be strings");
-
-        this.members = [{
-            userId: userA.userId,
-            username: userA.username || '',
-            photo: userA.photo || '',
-        }, {
-            userId: userB.userId,
-            username: userB.username || '',
-            photo: userB.photo || ''
-        }];
-
-        this.createdAt = Date.now()
+        this.members = members;
+        this.createdAt = createdAt;
         this.isRemoved = false;
-        if (_.isEmpty(fromRef)) {
-            this._sendTofirebase(onComplete)
-        } else {
-            this.chatRoomRef = fromRef
-        }
-
+        this.chatRoomRef = fromRef;
+        this.isOpen = true;
     }
 
-    /**
-     * private function send the data to firebase
-     * @private this is private function 
-     * @param {(err:Error)=>void} [onComplete] callback on success sending to firebase database 
-     */
-    _sendTofirebase(onComplete) {
-        // create chat room reference in firebase
-        this.chatRoomRef = firebase().collection('ChatRooms').doc();
-        this.chatRoomRef.set({
-            title: this.title,
-            members: this.members,
-            createdAt: this.createdAt,
-            isRemoved: this.isRemoved,
-        }, onComplete);
-
-        var chatKey = this.chatRoomRef.id;
-        // create user chat reference in firebase
-        const User1ChatRef = firebase().collection("UsersChat").doc(this.members[0].userId);
-        User1ChatRef.get().then((snap) => {
-            if (snap.exists) {
-                console.log('userA exists');
-                User1ChatRef.update({ [chatKey]: chatKey }).catch((err) => {
-                    if (err) {
-                        throw new ChatRoomError(err)
-                    }
-                });
-            }
-            else {
-                console.log('userA not exists');
-                User1ChatRef.set({ [chatKey]: chatKey }).catch((err) => {
-                    if (err) {
-                        throw new ChatRoomError(err)
-                    }
-                });
-            }
-        })
-
-        // create user chat reference in firebase
-        const User2ChatRef = firebase().collection("UsersChat").doc(this.members[1].userId);
-        User2ChatRef.get().then((snap) => {
-            if (snap.exists) {
-                console.log('userB exists');
-                User2ChatRef.update({ [chatKey]: chatKey }).catch((err) => {
-                    if (err) {
-                        throw new ChatRoomError(err)
-                    }
-                });
-            }
-            else {
-                console.log('userB not exists');
-                User2ChatRef.set({ [chatKey]: chatKey }).catch((err) => {
-                    if (err) {
-                        throw new ChatRoomError(err)
-                    }
-                });
-            }
-        });
-
+    constructor(fromRef, room) {
+        this.title = room.title;
+        this.members = room.members;
+        this.isRemoved = room.isRemoved;
+        this.createdAt = room.createdAt;
+        this.isOpen = room.isOpen;
+        this.chatRoomRef = fromRef;
     }
 
     /**
@@ -418,6 +411,7 @@ class Message {
 
 module.exports = {
     initializeFirebase,
-    ChatRoom,
+    createChatRoom,
+    joinChatRoom,
     Message
 }
