@@ -133,6 +133,16 @@ class ChatRoom {
         this.isRemoved = isRemoved;
         this.chatRoomRef = fromRef;
         this.isOpen = isOpen;
+        this.chatRoomRef.onSnapshot((doc) => {
+            const room = doc.data();
+            const { title, members, createdAt, isRemoved, isOpen } = room;
+            this.title = title
+            this.members = members;
+            this.createdAt = createdAt;
+            this.isRemoved = isRemoved;
+            this.chatRoomRef = fromRef;
+            this.isOpen = isOpen;
+        })
     }
 
     /**
