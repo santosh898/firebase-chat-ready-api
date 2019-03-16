@@ -106,7 +106,7 @@ function joinChatRoom(member, key) {
             chatRoomRef.update({ members: room.members, isOpen: false })
                 .then(() => {
                     addToMemberConversations(member.userId, chatRoomRef.id);
-                    resolve(new ChatRoom(fromRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt));
+                    resolve(new ChatRoom(chatRoomRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt));
                 });
         })
     });
