@@ -87,9 +87,9 @@ function addToMemberConversations(memberId, chatKey) {
     })
 }
 
-function joinChatRoom(member) {
+function joinChatRoom(member, key) {
     return new Promise((resolve, reject) => {
-        const chatRoomRef = firebase().collection('ChatRooms').doc(member.id);
+        const chatRoomRef = firebase().collection('ChatRooms').doc(key);
         chatRoomRef.get().then((doc) => {
             if (!doc.exists) {
                 throw new ChatRoomError("Chat Room does'nt exist");
