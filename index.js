@@ -25,7 +25,7 @@ function initializeFirebase(configures) {
     initializeApp(configures);
 }
 
-function createChatRoom(title, members, memberJoined) {
+function createChatRoom(title, members, memberJoined, memberLeft) {
     return new Promise((resolve, reject) => {
         if (_.isEmpty(title) || !_.isString(title))
             throw new ChatRoomError("title should be not empty and be string");
@@ -50,19 +50,31 @@ function createChatRoom(title, members, memberJoined) {
             isRemoved: false,
             isOpen: true
         }).then(() => {
-            observeForMemberJoins(chatRoomRef, members, memberJoined);
+            observeForMemberJoins(chatRoomRef, members, memberJoined, memberLeft);
             members.forEach(member => { addToMemberConversations(member.userId, chatRoomRef.id); });
             resolve(new ChatRoom(chatRoomRef, title, members, false, true, createdAt));
         });
     });
 }
 
-function observeForMemberJoins(ref, members, joined) {
+function observeForMemberJoins(ref, members, joined, left) {
     ref.onSnapshot((doc) => {
         const room = doc.data();
         if (room !== undefined) {
             if (room.members.length > members.length)
                 joined();
+            if (room.isRemoved)
+                left();
+        }
+    })
+}
+
+function observeForMemberLeft(ref, left) {
+    ref.onSnapshot((doc) => {
+        const room = doc.data();
+        if (room !== undefined) {
+            if (room.isRemoved)
+                left();
         }
     })
 }
@@ -87,7 +99,7 @@ function addToMemberConversations(memberId, chatKey) {
     })
 }
 
-function joinChatRoom(member, key) {
+function joinChatRoom(member, key, onMemberLeft) {
     return new Promise((resolve, reject) => {
         const chatRoomRef = firebase().collection('ChatRooms').doc(key);
         chatRoomRef.get().then((doc) => {
@@ -106,6 +118,7 @@ function joinChatRoom(member, key) {
             chatRoomRef.update({ members: room.members, isOpen: false })
                 .then(() => {
                     addToMemberConversations(member.userId, chatRoomRef.id);
+                    observeForMemberLeft(chatRoomRef, onMemberLeft);
                     resolve(new ChatRoom(chatRoomRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt));
                 });
         })
