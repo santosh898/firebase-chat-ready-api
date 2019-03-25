@@ -125,6 +125,23 @@ function joinChatRoom(member, key, onMemberLeft) {
     });
 }
 
+function getChatRoom(key) {
+    return new Promise((resolve, reject) => {
+        const chatRoomRef = firebase().collection('ChatRooms').doc(key);
+        chatRoomRef.get().then((doc) => {
+            if (!doc.exists) {
+                reject(new ChatRoomError("Chat Room does'nt exist"));
+            }
+            const room = doc.data();
+            if (room.isRemoved) {
+                reject(new ChatRoomError("Chat Room was Already removed"));
+            }
+            observeForMemberLeft(chatRoomRef, onMemberLeft);
+            resolve(new ChatRoom(chatRoomRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt));
+        });
+    });
+}
+
 /**@class */
 class ChatRoom {
 
