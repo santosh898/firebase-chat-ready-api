@@ -463,5 +463,6 @@ module.exports = {
     initializeFirebase,
     createChatRoom,
     joinChatRoom,
+    getChatRoom,
     Message
 }
