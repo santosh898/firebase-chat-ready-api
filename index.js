@@ -304,20 +304,19 @@ class ChatRoom {
      * get message by message
      * 
      * @param {Function} onComplete callback after receive each message
+     * @param {Function} onFinish callback after finished with all messages
      */
-    getAllMessages(onComplete) {
-        // ! remove this error to make it work
-        throw new ChatRoomError("You should not use this method use getMessagesAndListen instead ");
-
-        // ?  working ? 
-        this.chatRoomRef.child("messages").once("value", (messagesSnapshot) => {
-            messagesSnapshot.forEach((message) => {
-                var messageRef = this.chatRoomRef.child("messages").child(message.key);
-                var message = message.toJSON()
-                var newMessage = new Message(message.body, message.from, this, undefined, messageRef)
-                onComplete(undefined, newMessage)
-            })
-        }, onComplete)
+    getAllMessages(onComplete, onFinish) {
+        this.chatRoomRef.collection('messages').get().then(docs => {
+            docs.forEach(doc => {
+                var messageRef = this.chatRoomRef.collection("messages").doc(doc.id);
+                var message = doc.data();
+                var newMessage = new Message(message.body, message.from, this, undefined, messageRef);
+                newMessage.createdAt = message.createdAt;
+                onComplete(newMessage);
+            });
+            onFinish();
+        });
     }
 
     /**
