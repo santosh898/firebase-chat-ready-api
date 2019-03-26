@@ -1,6 +1,6 @@
 {
 	"name": "firebase-chat-ready-api",
-	"version": "3.0.9",
+	"version": "3.0.10",
 	"description": "Firebase-chat-ready-API is a simple package, enable fast connection to firebase firestore to create chat manager API.",
 	"main": "index.js",
 	"scripts": {
