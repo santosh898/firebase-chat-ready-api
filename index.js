@@ -125,7 +125,7 @@ function joinChatRoom(member, key, onMemberLeft) {
     });
 }
 
-function getChatRoom(key, onMemberLeft) {
+function getChatRoom(key, onMemberLeft, onMemberJoined) {
     return new Promise((resolve, reject) => {
         const chatRoomRef = firebase().collection('ChatRooms').doc(key);
         chatRoomRef.get().then((doc) => {
@@ -136,7 +136,10 @@ function getChatRoom(key, onMemberLeft) {
             if (room.isRemoved) {
                 throw new ChatRoomError("Chat Room was Already removed");
             }
-            observeForMemberLeft(chatRoomRef, onMemberLeft);
+            if (onMemberJoined)
+                observeForMemberJoins(chatRoomRef, room.members, onMemberJoined, onMemberLeft);
+            else
+                observeForMemberLeft(chatRoomRef, onMemberLeft);
             resolve(new ChatRoom(chatRoomRef, room.title, room.members, room.isRemoved, room.isOpen, room.createdAt));
         });
     });
@@ -307,7 +310,7 @@ class ChatRoom {
      * @param {Function} onFinish callback after finished with all messages
      */
     getAllMessages(onComplete, onFinish) {
-        this.chatRoomRef.collection('messages').get().then(docs => {
+        this.chatRoomRef.collection('messages').orderBy("createdAt", "asc").get().then(docs => {
             docs.forEach(doc => {
                 var messageRef = this.chatRoomRef.collection("messages").doc(doc.id);
                 var message = doc.data();
