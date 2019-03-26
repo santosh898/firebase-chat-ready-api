@@ -125,7 +125,7 @@ function joinChatRoom(member, key, onMemberLeft) {
     });
 }
 
-function getChatRoom(key) {
+function getChatRoom(key, onMemberLeft) {
     return new Promise((resolve, reject) => {
         const chatRoomRef = firebase().collection('ChatRooms').doc(key);
         chatRoomRef.get().then((doc) => {
